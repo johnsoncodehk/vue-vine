@@ -1,0 +1,116 @@
+import type { Config } from '@tsslint/config'
+import { antfu } from '@antfu/eslint-config'
+import { createIgnorePlugin } from '@tsslint/config'
+import { convertRules } from '@tsslint/eslint'
+
+const includedPlugins = new Set([
+  'antfu/ignores',
+  'antfu/javascript/rules',
+  'antfu/eslint-comments/rules',
+  'antfu/node/rules',
+  'antfu/jsdoc/rules',
+  'antfu/imports/rules',
+  'antfu/command/rules',
+  'antfu/perfectionist/setup',
+  'antfu/imports/rules',
+  'antfu/unicorn/rules',
+  'antfu/typescript/rules',
+  'antfu/stylistic/rules',
+  'antfu/regexp/rules',
+  'antfu/test/rules',
+  'antfu/disables/scripts',
+  'antfu/disables/cli',
+  'antfu/disables/bin',
+  'antfu/disables/dts',
+  'antfu/disables/cjs',
+  'antfu/disables/config-files',
+])
+const esConfigs = (await antfu(
+  {
+    typescript: true,
+    pnpm: true,
+    ignores: [
+      'node_modules',
+      'dist',
+      'pnpm-lock.yaml',
+
+      'packages/docs/.vitepress/cache',
+      'packages/e2e-test/**/*.vine.ts',
+      'packages/create-vue-vine/template/**/*',
+      'packages/nuxt-module/playground/*',
+    ],
+  },
+  {
+    rules: {
+      'curly': 'off',
+      'prefer-const': 'off',
+    },
+  },
+  {
+    files: [
+      'packages/language-service/**/*.ts',
+      'packages/language-server/**/*.ts',
+    ],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+)).filter(config => config.name && includedPlugins.has(config.name))
+const tssConfigs: Config[] = []
+const exclude = esConfigs.map(config => config.ignores ?? []).flat()
+
+for (const esConfig of esConfigs) {
+  const tssConfig: Config = {}
+  if (exclude.length) {
+    tssConfig.exclude = exclude
+  }
+  if (esConfig.files) {
+    tssConfig.include = esConfig.files.flat()
+  }
+  if (esConfig.rules) {
+    tssConfig.rules = await convertRules(fixRuleNames(esConfig.rules))
+  }
+  tssConfigs.push(tssConfig)
+}
+
+tssConfigs.push({
+  plugins: [
+    createIgnorePlugin('eslint-disable-next-line', false),
+  ],
+  rules: {
+    'new-cap': () => { }, // TODO: FIXME
+  },
+})
+
+export default tssConfigs
+
+function fixRuleNames(rules: Record<string, any>) {
+  const renamed: Record<string, any> = {}
+  for (let [key, value] of Object.entries(rules)) {
+    if (key.startsWith('eslint-comments/')) {
+      key = key.replace('eslint-comments/', '@eslint-community/eslint-comments/')
+    }
+    else if (key.startsWith('node/')) {
+      key = key.replace('node/', 'n/')
+    }
+    else if (key.startsWith('import/')) {
+      key = key.replace('import/', 'import-lite/')
+    }
+    else if (key.startsWith('ts/')) {
+      key = key.replace('ts/', '@typescript-eslint/')
+    }
+    else if (key.startsWith('style/')) {
+      key = key.replace('style/', '@stylistic/')
+    }
+    else if (key.startsWith('test/')) {
+      if (key.endsWith('/no-only-tests')) {
+        key = 'no-only-tests/no-only-tests'
+      }
+      else {
+        key = key.replace('test/', '@vitest/')
+      }
+    }
+    renamed[key] = value
+  }
+  return renamed
+}

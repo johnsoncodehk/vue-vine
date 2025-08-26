@@ -21,6 +21,7 @@
     "tsdown.config.ts"
   ],
   "exclude": [
+    "**/out",
     "**/dist",
     "packages/nuxt-module",
     "packages/e2e-test",

@@ -166,3 +166,7 @@ onlyBuiltDependencies:
   - simple-git-hooks
   - unrs-resolver
   - vue-demi
+catalog:
+  '@tsslint/cli': ^2.0.4
+  '@tsslint/config': ^2.0.4
+  '@tsslint/eslint': ^2.0.4
