@@ -1,9 +1,9 @@
 import type { Config } from '@tsslint/config'
 import { antfu } from '@antfu/eslint-config'
-import { createIgnorePlugin } from '@tsslint/config'
+import { createIgnorePlugin, defineConfig } from '@tsslint/config'
 import { convertRules } from '@tsslint/eslint'
 
-const includedPlugins = new Set([
+const includedPlugins = new Set<string | undefined>([
   'antfu/ignores',
   'antfu/javascript/rules',
   'antfu/eslint-comments/rules',
@@ -25,44 +25,38 @@ const includedPlugins = new Set([
   'antfu/disables/cjs',
   'antfu/disables/config-files',
 ])
-const esConfigs = (await antfu(
-  {
-    typescript: true,
-    pnpm: true,
-    ignores: [
-      'node_modules',
-      'dist',
-      'pnpm-lock.yaml',
+const esConfigs = (await antfu({ typescript: true })).filter(config => includedPlugins.has(config.name))
+const globalExclude = esConfigs.map(config => config.ignores ?? []).flat()
 
-      'packages/docs/.vitepress/cache',
-      'packages/e2e-test/**/*.vine.ts',
-      'packages/create-vue-vine/template/**/*',
-      'packages/nuxt-module/playground/*',
+export default defineConfig([
+  ...await Promise.all(esConfigs.map(convertConfig)),
+  {
+    plugins: [
+      createIgnorePlugin('eslint-disable-next-line', false),
     ],
   },
   {
-    rules: {
-      'curly': 'off',
-      'prefer-const': 'off',
-    },
-  },
-  {
-    files: [
+    include: [
       'packages/language-service/**/*.ts',
       'packages/language-server/**/*.ts',
     ],
     rules: {
-      'no-console': 'off',
+      'no-console': () => { },
     },
   },
-)).filter(config => config.name && includedPlugins.has(config.name))
-const tssConfigs: Config[] = []
-const exclude = esConfigs.map(config => config.ignores ?? []).flat()
+  {
+    rules: {
+      'curly': () => { },
+      'prefer-const': () => { },
+      'new-cap': () => { }, // TODO: FIXME
+    },
+  },
+])
 
-for (const esConfig of esConfigs) {
+async function convertConfig(esConfig: any) {
   const tssConfig: Config = {}
-  if (exclude.length) {
-    tssConfig.exclude = exclude
+  if (globalExclude.length) {
+    tssConfig.exclude = globalExclude
   }
   if (esConfig.files) {
     tssConfig.include = esConfig.files.flat()
@@ -70,19 +64,8 @@ for (const esConfig of esConfigs) {
   if (esConfig.rules) {
     tssConfig.rules = await convertRules(fixRuleNames(esConfig.rules))
   }
-  tssConfigs.push(tssConfig)
+  return tssConfig
 }
-
-tssConfigs.push({
-  plugins: [
-    createIgnorePlugin('eslint-disable-next-line', false),
-  ],
-  rules: {
-    'new-cap': () => { }, // TODO: FIXME
-  },
-})
-
-export default tssConfigs
 
 function fixRuleNames(rules: Record<string, any>) {
   const renamed: Record<string, any> = {}
