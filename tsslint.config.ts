@@ -33,8 +33,10 @@ export default defineConfig([
   {
     plugins: [
       createIgnorePlugin('eslint-disable-next-line', false),
-      createCategoryPlugin({ '**': 3 }),
-      createCategoryPlugin({ '@stylistic/*': 2 }),
+      createCategoryPlugin({
+        '@stylistic/*': 2,
+        '**': 3,
+      }),
     ],
   },
   {
