@@ -1,6 +1,6 @@
 import type { Config } from '@tsslint/config'
 import { antfu } from '@antfu/eslint-config'
-import { createIgnorePlugin, defineConfig } from '@tsslint/config'
+import { createCategoryPlugin, createIgnorePlugin, defineConfig } from '@tsslint/config'
 import { convertRules } from '@tsslint/eslint'
 
 const includedPlugins = new Set<string | undefined>([
@@ -33,6 +33,8 @@ export default defineConfig([
   {
     plugins: [
       createIgnorePlugin('eslint-disable-next-line', false),
+      createCategoryPlugin({ '**': 3 }),
+      createCategoryPlugin({ '@stylistic/*': 2 }),
     ],
   },
   {
